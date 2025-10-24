@@ -4,6 +4,7 @@
 // Inclusions must go prior to the namespace
 #include <exception>
 #include <string>
+#include <vector>
 
 namespace sym {
     class error : public std::exception {
@@ -18,10 +19,17 @@ namespace sym {
 
     class sym {
     private:
-
+        std::string rawEquation_;
+        std::vector<std::string> formula_;
     public:
         sym();
+        sym(std::string equation);
         ~sym();
+
+        std::string getRawEquation();
+
+        template<typename T>
+        T at(T val);
     };
 }
 
