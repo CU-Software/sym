@@ -3,7 +3,7 @@ CXXFLAGS = -std=c++17 -Wall -Wextra -g
 TARGET   = main
 SOURCES  = src/main.cpp src/sym.cpp
 OBJECTS  = $(SOURCES:.cpp=.o)
-HEADERS  = lexer.h ast.h
+HEADERS  = sym.h
 
 all: $(TARGET)
 
