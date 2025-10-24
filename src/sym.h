@@ -19,15 +19,19 @@ namespace sym {
 
     class sym {
     private:
-        std::string rawEquation_;
+        std::string equation_;
         std::vector<std::string> formula_;
+
+        void parse(const std::string& equation);
     public:
         sym();
         sym(std::string equation);
         ~sym();
 
-        std::string getRawEquation();
+        std::string getEquation();
 
+        template<typename T>
+        T at(T val, size_t idx);
         template<typename T>
         T at(T val);
     };
