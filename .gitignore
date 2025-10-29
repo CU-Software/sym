@@ -7,3 +7,6 @@ build/*
 src/*.o
 main
 main.exe
+
+# Ingore Notes
+notes.txt

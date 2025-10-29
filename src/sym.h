@@ -17,7 +17,13 @@ namespace sym {
     };
 
     class sym {
+<<<<<<< HEAD
     private:
+=======
+    public:
+        std::string equation_;
+        std::vector<std::string> formula_;
+>>>>>>> cc7f8b6 (Added testcase!)
 
     public:
         sym();
