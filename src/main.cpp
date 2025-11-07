@@ -30,8 +30,23 @@ bool test() {
 }
 */
 
-int main(int argc, char** argv) {
+int main(/* int argc, char** argv */) {
     std::cout << "Hello CUSEC Devs!" << std::endl;
-    std::cout << "Hello World!" << std::endl;
+
+    sym::sym eq("3x^2");
+
+    std::cout << "Tokenized equation -> ";
+    auto tokens = eq.getTokens();
+    for (auto&& tok : tokens)
+        std::cout << tok << ", ";
+    std::cout << std::endl;
+
+    double in = 0;
+    while (in != 67) {
+        printf("value @ %g is %g\n", in, eq.at(in));
+        printf("Enter next value (67 for quit): ");
+        scanf("%lf", &in);
+    }
+
     return 0;
 }
