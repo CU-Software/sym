@@ -33,18 +33,19 @@ bool test() {
 int main(/* int argc, char** argv */) {
     std::cout << "Hello CUSEC Devs!" << std::endl;
 
-    sym::sym eq("3x^2");
+    sym::sym eq("3x^2+11-1");
 
     std::cout << "Tokenized equation -> ";
     auto tokens = eq.getTokens();
-    for (auto&& tok : tokens)
+    for (auto&& tok : tokens) {
         std::cout << tok << ", ";
+    }
     std::cout << std::endl;
 
     double in = 0;
     while (in != 67) {
         printf("value @ %g is %g\n", in, eq.at(in));
-        printf("Enter next value (67 for quit): ");
+        printf("Enter next value (67 to quit): ");
         scanf("%lf", &in);
     }
 

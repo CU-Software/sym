@@ -1,6 +1,9 @@
 #ifndef SYM_H
 #define SYM_H
 
+// usage: DEBUG(TITLE) shows formula tokens at current evaluation point in at()
+#define DEBUG(x) printf("\033[32m--%8s:\t", #x); for (auto token : formula) { std::cout << token << " "; } puts("\33[m");
+
 // Inclusions must go prior to the namespace
 #include <exception>
 #include <string>
@@ -11,7 +14,7 @@
 
 namespace sym {
 
-bool isoperator(char c);
+bool isfunction(std::string f);
 
 class error : public std::exception {
 private:
@@ -32,13 +35,13 @@ private:
     void tokenize(const std::string& equation);
 
     template <typename T>
-    void applyOp(T& val1, T val2, char op) {
+    T applyOp(T val1, T val2, char op) {
         switch(op) {
-            case '^': val1 = pow(val1, val2); break;
-            case '*': val1 *= val2; break;
-            case '/': val1 /= val2; break;
-            case '+': val1 += val2; break;
-            case '-': val1 -= val2; break;
+            case '^': return pow(val1, val2);
+            case '*': return val1 * val2;
+            case '/': return val1 / val2;
+            case '+': return val1 + val2;
+            case '-': return val1 - val2;
             default: throw error("Invalid operator " + std::string(1, op));
         }
     }
@@ -52,69 +55,71 @@ public:
     std::vector<std::string> getTokens();
 
     template <typename T>
-    T at(T val, size_t idx = 0) {
-        T result = 0;
-        char op = 0;
-
-        for (size_t i = idx; i < formula_.size(); ++i) {
-            if (formula_[i] == ")") { // Closing Paren
-                return result;
+    T at(T val) {
+        std::vector<std::string> formula(formula_);
+        for (size_t i = 0; i < formula.size(); ++i) { // Variable subsitution
+            if (formula[i] == "x") {
+                formula[i] = std::to_string(val);
             }
-            if (formula_[i] == "(") { // Opening Paren
-                if (op) {
-                    applyOp(result, at(val, i + 1), op);
-                    op = 0;
-                }
-                else {
-                    result = at(val, i + 1);
-                }
-            }
-            if (isdigit(formula_[i][0])) { // Number
-                double number;
-                try {
-                    number = std::stod(formula_[i]);
-                } catch (std::invalid_argument) {
-                    throw error("Failed to convert " + formula_[i] + " to number value");
-                }
-                if (op) {
-                    applyOp(result, static_cast<T>(number), op);
-                    op = 0;
-                }
-                else {
-                    result = static_cast<T>(number);
-                }
-            }
-            if (formula_[i] == "x") { // Variable
-                if (op) {
-                    applyOp(result, val, op);
-                    op = 0;
-                }
-                else {
-                    result = val;
-                }
-            } else if (isalpha(formula_[i][0])) { // Function
-                auto it = mathFuncs.find(formula_[i]);
-                if (it == mathFuncs.end()) {
-                    throw error("Invalid function '" + formula_[i] + "'");
-                }
-                if (i + 1 < formula_.size() && formula_[i + 1] != "(") {
-                    throw error("Missing parenthesis for function '" + formula_[i] + "'");
-                }
-                if (op) {
-                    applyOp(result, static_cast<T>(it->second(at(val, i + 1))), op);
-                    op = 0;
-                }
-                else {
-                    result = static_cast<T>(it->second(at(val, i + 1)));
-                }
-            }
-            if (isoperator(formula_[i][0])) { // Operator
-                op = formula_[i][0];
-            }
-            std::cout << "result = " << result << ",\ti = " << i << '\n';
         }
+        DEBUG(INIT)
+        return at(val, formula);
+    }
 
-        return result;
+    template <typename T>
+    T at(T val, std::vector<std::string>& formula, size_t idx = 0) {
+        for (size_t i = idx; i < formula.size(); ++i) { // Opening Paren
+            if (formula[i] == "(") {
+                formula[i] = std::to_string(at(val, formula, i + 1));
+                DEBUG(OPEN)
+            }
+        }
+        for (size_t i = idx; i < formula.size(); ++i) { // Exponent
+            if (formula[i][0] == ')') {
+                formula.erase(formula.begin() + idx, formula.begin() + i + 1);
+                DEBUG(CLOSE@E)
+                return std::stod(formula[idx]);
+            }
+            if (formula[i][0] == '^') {
+                double val1 = std::stod(formula[i - 1]);
+                double val2 = std::stod(formula[i + 1]);
+                formula[i - 1] = std::to_string(applyOp(val1, val2, formula[i][0]));
+                formula.erase(formula.begin() + i, formula.begin() + i + 2);
+                --i;
+                DEBUG(EXPO)
+            }
+        }
+        for (size_t i = idx; i < formula.size(); ++i) { // Multiply/Divide
+            if (formula[i][0] == ')') {
+                formula.erase(formula.begin() + idx, formula.begin() + i + 1);
+                DEBUG(CLOSE@MD)
+                return std::stod(formula[idx]);
+            }
+            if (formula[i][0] == '*' || formula[i][0] == '/') {
+                double val1 = std::stod(formula[i - 1]);
+                double val2 = std::stod(formula[i + 1]);
+                formula[i - 1] = std::to_string(applyOp(val1, val2, formula[i][0]));
+                formula.erase(formula.begin() + i, formula.begin() + i + 2);
+                --i;
+                DEBUG(MD)
+            }
+        }
+        for (size_t i = idx; i < formula.size(); ++i) { // Add/Subtract
+            if (formula[i][0] == ')') {
+                formula.erase(formula.begin() + idx, formula.begin() + i + 1);
+                DEBUG(CLOSE@AS)
+                return std::stod(formula[idx]);
+            }
+            if (formula[i][0] == '+' || formula[i][0] == '-') {
+                double val1 = std::stod(formula[i - 1]);
+                double val2 = std::stod(formula[i + 1]);
+                formula[i - 1] = std::to_string(applyOp(val1, val2, formula[i][0]));
+                formula.erase(formula.begin() + i, formula.begin() + i + 2);
+                --i;
+                DEBUG(AS)
+            }
+        }
+        return std::stod(formula[idx]);
     }
 };
 

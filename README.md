@@ -2,4 +2,4 @@
 
 Sym is a C++ based symbolic library.
 
-No underscores or hyphens are allowed in equation string
+No underscores or hyphens are allowed in function names

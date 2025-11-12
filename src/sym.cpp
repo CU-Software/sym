@@ -4,10 +4,11 @@
 
 namespace sym {
 
-bool isoperator(char c) {
-    return std::string("^*/+-").find(c) != std::string::npos;
+bool isfunction(std::string f) {
+    return f.length() > 1 && std::find_if(f.begin(), f.end(), [](char c) { return !isalpha(c); }) == f.end();
 }
 
+// Example usage: mathFuncs.find("cos")->second(M_PI / 3);
 const std::unordered_map<std::string, std::function<double(double)>> sym::mathFuncs = {
     {"sin",  [](double x){ return std::sin(x);   }},
     {"cos",  [](double x){ return std::cos(x);   }},
@@ -43,7 +44,7 @@ void sym::tokenize(const std::string& equation) {
             }
             --i;
             formula_.push_back(buffer);
-            continue;    
+            continue;
         }
         if (isalpha(c)) {
             while (i < equation.length() && std::isalpha(c)) {
@@ -56,16 +57,23 @@ void sym::tokenize(const std::string& equation) {
                 if (buffer[0] != 'x') {
                     throw error("Variables other than 'x' are not supported");
                 }
-                formula_.push_back("*");
+                if (i > 0 && isdigit(formula_.back()[0])) {
+                    formula_.push_back("*");
+                }
             }
             formula_.push_back(buffer);
-            continue;    
+            continue;
         }
         switch(c) {
-            case '(': case ')': case '^': case '*': case '/': case '+': case '-':
+            case '(':
+                if (isdigit(formula_.back()[0]) || formula_.back().length() == 1) {
+                    formula_.push_back("*");
+                }
+            case ')': case '^': case '*': case '/': case '+': case '-':
                 formula_.push_back(std::string(1, c));
                 break;
-            default: throw error("Invalid character " + std::string(1, c) + " at position " + std::to_string(i + 1));
+            default:
+                throw error("Invalid character " + std::string(1, c) + " at position " + std::to_string(i + 1));
         }
     }
 }
