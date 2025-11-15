@@ -4,20 +4,44 @@
 
 namespace sym {
 
-bool isfunction(std::string f) {
-    return f.length() > 1 && std::find_if(f.begin(), f.end(), [](char c) { return !isalpha(c); }) == f.end();
+bool isoperator(char c) {
+    return std::string("^*/+-").find(c) != std::string::npos;
+}
+
+bool isnumber(const std::string& s) {
+    return isdigit(s[0]) || s[0] == '.' ||
+    (s.length() > 1 && s[0] == '-' && (isdigit(s[1]) || s[1] == '.'));
+}
+
+bool isspecial(const std::string& s) {
+    return s == "nan" || s == "inf" || s == "-inf";
+}
+
+bool isvariable(const std::string& s) {
+    return s == "x"; // TODO support multivariable expression
+    // return s.length() == 1 && isalpha(s[0]);
+}
+
+bool isfunction(const std::string& s) {
+    return s.length() > 1 &&
+           std::find_if(s.begin(), s.end(), [](char c)
+                        { return !isalpha(c); }) == s.end();
 }
 
 // Example usage: mathFuncs.find("cos")->second(M_PI / 3);
 const std::unordered_map<std::string, std::function<double(double)>> sym::mathFuncs = {
-    {"sin",  [](double x){ return std::sin(x);   }},
-    {"cos",  [](double x){ return std::cos(x);   }},
-    {"tan",  [](double x){ return std::tan(x);   }},
-    {"asin", [](double x){ return std::asin(x);  }},
-    {"acos", [](double x){ return std::acos(x);  }},
-    {"atan", [](double x){ return std::atan(x);  }},
-    {"log",  [](double x){ return std::log10(x); }},
-    {"ln",   [](double x){ return std::log(x);   }}
+    {"sin",  [](double x){ return std::sin(x);       }},
+    {"csc",  [](double x){ return 1.0 / std::sin(x); }},
+    {"cos",  [](double x){ return std::cos(x);       }},
+    {"sec",  [](double x){ return 1.0 / std::cos(x); }},
+    {"tan",  [](double x){ return std::tan(x);       }},
+    {"cot",  [](double x){ return 1.0 / std::tan(x); }},
+    {"asin", [](double x){ return std::asin(x);      }},
+    {"acos", [](double x){ return std::acos(x);      }},
+    {"atan", [](double x){ return std::atan(x);      }},
+    {"log",  [](double x){ return std::log10(x);     }},
+    {"ln",   [](double x){ return std::log(x);       }},
+    {"sqrt", [](double x){ return std::sqrt(x);      }}
 };
 
 // Utility functions
@@ -29,6 +53,12 @@ void sym::tokenize(const std::string& equation) {
         c = equation[i];
         if (isspace(c)) {
             continue;
+        }
+        if (c == '-' &&
+            (isoperator(formula_.back()[0]) || formula_.back()[0] == '('))
+        {
+            buffer += c;
+            c = equation[++i];
         }
         if (isdigit(c) || c == '.') {
             bool hasDecimal = false;
@@ -57,23 +87,35 @@ void sym::tokenize(const std::string& equation) {
                 if (buffer[0] != 'x') {
                     throw error("Variables other than 'x' are not supported");
                 }
-                if (i > 0 && isdigit(formula_.back()[0])) {
-                    formula_.push_back("*");
-                }
+            }
+            if (i > 0 && isdigit(formula_.back()[0])) {
+                formula_.push_back("*");
             }
             formula_.push_back(buffer);
             continue;
         }
+        if (c == '(' && formula_.size() &&
+            !isoperator(formula_.back()[0]) &&
+            (isdigit(formula_.back()[0]) || formula_.back().length() == 1))
+        {
+            formula_.push_back("*");
+        }
         switch(c) {
-            case '(':
-                if (isdigit(formula_.back()[0]) || formula_.back().length() == 1) {
-                    formula_.push_back("*");
-                }
-            case ')': case '^': case '*': case '/': case '+': case '-':
+            case '(': case ')': case '^': case '*': case '/': case '+': case '-':
                 formula_.push_back(std::string(1, c));
                 break;
             default:
                 throw error("Invalid character " + std::string(1, c) + " at position " + std::to_string(i + 1));
+        }
+    }
+    for (size_t i = 0; i < formula_.size(); ++i) { // Simplify parenthesized numbers
+        if (i + 2 < formula_.size() &&
+            formula_[i][0] == '(' &&
+            (isnumber(formula_[i + 1]) || isvariable(formula_[i + 1])) &&
+            formula_[i + 2][0] == ')')
+        {
+            formula_[i] = formula_[i + 1];
+            formula_.erase(formula_.begin() + i + 1, formula_.begin() + i + 3);
         }
     }
 }
@@ -90,11 +132,11 @@ sym::sym(std::string equation)
 sym::~sym() {}
 
 // Public functions
-std::string sym::getEquation() {
+const std::string& sym::getEquation() const {
     return equation_;
 }
 
-std::vector<std::string> sym::getTokens() {
+const std::vector<std::string>& sym::getTokens() const {
     return formula_;
 }
 
